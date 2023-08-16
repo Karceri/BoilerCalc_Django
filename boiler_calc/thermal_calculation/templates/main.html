@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Главная</title>
+</head>
+<body>
+    <div>
+        <p>
+            Вас приветствует программа по расчету котельного агрегата!
+        </p>
+
+        <form enctype="multipart/form-data" class="mt-3 form" method="POST">
+            {% csrf_token %}
+            {{ form.as_div }}
+            <button type="submit">Отправить на расчет</button>
+        </form>
+
+        {% if file_path %}
+            <p>Путь файла: {{ file_path }}</p>
+        {% endif %}
+    </div>
+</body>
+</html>

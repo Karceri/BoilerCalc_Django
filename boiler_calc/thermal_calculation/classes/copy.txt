@@ -1,0 +1,286 @@
+import math
+from . import newton_method
+from pyXSteam.XSteam import XSteam
+WaterSteam = XSteam(XSteam.UNIT_SYSTEM_MKS)
+
+
+class VZP:
+    def __init__(self, boiler, type, name, unknown, stat, tipdvizh, vii, tii, F, fg, fi_pp,
+                 delta_alfa, ksi0, delta_ksi, wg, wp, air_number, gaz_number):
+        self.arg = {
+            'vi' : 1,
+            'ti' : 1,
+            'Hi' : 1,
+            'hi' : 1,
+            'k' : 0,
+            'deltat' : 0,
+            'Qb' : 0,
+            'Br' : 1,
+            'Pi' : 1,
+            'Pii' : 1,
+            'Bi_air' : 1,
+            'Bii_air' : 1,
+            'fi' : 1,
+            'bettagvii' : 1,
+            'bettagvi': 1,
+            'Qlvh': 1,
+            'Ql': 1,
+            'Qlvyh': 1,
+            'alfai': 1,
+            'alfaii': 1,
+            'vc_rec' : 0,
+            'H_rec' : 0,
+            'Vg' : 1,
+            'vii' : vii,
+            'tii': tii,
+            'Hii' : math.nan,
+            'hii': math.nan,
+            'F' : F,
+            'fg' : fg,
+            'fi_pp' : fi_pp,
+            'ksi0' : ksi0,
+            'delta_ksi' : delta_ksi,
+            'wg' : wg,
+            'wp' : wp,
+            'delta_alfa' : delta_alfa,
+        }
+        ##########################
+        self.boiler = boiler
+        self.type = type
+        self.name = name
+        self.unknown = unknown
+        self.tipdvizh = tipdvizh
+        self.air_number = air_number
+        self.gaz_number = gaz_number
+        self.stat = stat
+        self.all = all = {
+            'Hi' : 'Hi',
+            'hi' : 'hi_air',
+            'Hii' : 'Hii',
+            'hii' : 'hii_air',
+            'F' : 'F',
+        }
+        self.varia = list(set(all.values()) - set(stat) - set(unknown))
+        self.unknown_local = list(key for key, value in all.items() if value in unknown)
+
+    @property
+    def Bi(self):
+        return self.arg['Br']
+
+    @Bi.setter
+    def Bi(self, value):
+        self.arg['Br'] = value
+
+    @property
+    def Bii(self):
+        return self.arg['Br']
+
+    @Bii.setter
+    def Bii(self, value):
+        self.arg['Br'] = value
+
+    @property
+    def Hi_air(self):
+        return self.arg['hi']
+
+    @Hi_air.setter
+    def Hi_air(self, value):
+        self.arg['hi'] = value
+
+    @property
+    def Hii_air(self):
+        return self.arg['hii']
+
+    @Hii_air.setter
+    def Hii_air(self, value):
+        self.arg['hii'] = value
+
+    @property
+    def ti_air(self):
+        return self.arg['ti']
+
+    @ti_air.setter
+    def ti_air(self, value):
+        self.arg['ti'] = value
+
+    @property
+    def tii_air(self):
+        return self.arg['tii']
+
+    @tii_air.setter
+    def tii_air(self, value):
+        self.arg['tii'] = value
+
+    @property
+    def bettagvii(self):
+        return self.arg['bettagvii']
+
+    @bettagvii.setter
+    def bettagvii(self, value):
+        self.arg['bettagvii'] = value
+
+    @property
+    def Bii_air(self):
+        return self.arg['Bii_air']
+
+    @Bii_air.setter
+    def Bii_air(self, value):
+        self.arg['Bii_air'] = value
+
+    @property
+    def vi(self):
+        return self.arg['vi']
+
+    @vi.setter
+    def vi(self, value):
+        self.arg['vi'] = value
+
+    @property
+    def vii(self):
+        return self.arg['vii']
+
+    @vii.setter
+    def vii(self, value):
+        self.arg['vii'] = value
+
+    @property
+    def Hi(self):
+        return self.arg['Hi']
+
+    @Hi.setter
+    def Hi(self, value):
+        self.arg['Hi'] = value
+
+    @property
+    def Hii(self):
+        return self.arg['Hii']
+
+    @Hii.setter
+    def Hii(self, value):
+        self.arg['Hii'] = value
+
+    @property
+    def Qlvh(self):
+        return self.arg['Qlvh']
+
+    @Qlvh.setter
+    def Qlvh(self, value):
+        self.arg['Qlvh'] = value
+
+    @property
+    def Qlvyh(self):
+        return self.arg['Qlvyh']
+
+    @Qlvyh.setter
+    def Qlvyh(self, value):
+        self.arg['Qlvyh'] = value
+
+    @property
+    def alfai(self):
+        return self.arg['alfai']
+
+    @alfai.setter
+    def alfai(self, value):
+        self.arg['alfai'] = value
+
+    @property
+    def alfaii(self):
+        return self.arg['alfaii']
+
+    @alfaii.setter
+    def alfaii(self, value):
+        self.arg['alfaii'] = value
+
+    def __Qb_method(self):
+        arg = self.arg
+        arg['Qb'] = arg['k'] * arg['deltat'] * arg['F'] / 1000
+
+    def __k_method(self, wg, wp):
+        arg = self.arg
+        ksi = arg['ksi0'] + arg['delta_ksi']
+        k = 3 * ksi * math.pow(wg + 0.5 * wp, 0.8)
+        return k
+
+    def __vzpiter(self, argum):
+        boiler, unknown, unknown_local, tipdvizh, arg \
+            = self.boiler, self.unknown, self.unknown_local, self.tipdvizh, self.arg
+
+        access = False
+        arg['Hi'] = argum['Hi']
+        arg['Hii'] = argum['Hii']
+        arg['hi'] = argum["hi_air"]
+        arg['hii'] = argum["hii_air"]
+        arg['F'] = argum["F"]
+
+        prov_argum = {
+            'Hii' : 0,
+            'hii_air' : 0,
+        }
+        arg['vi'] = boiler.vgaz(arg['Hi'], arg['alfai'], arg['vc_rec'], arg['H_rec']) if 'Hi' in unknown else arg['vi']
+        arg['ti'] = boiler.tAIR(arg['hi']) if 'hi_air' in unknown else arg['ti']
+        arg['vii'] = boiler.vgaz(arg['Hii'], arg['alfaii'], arg['vc_rec'], arg['H_rec']) if 'Hii' in unknown else arg['vii']
+        arg['tii'] = boiler.tAIR(arg['hii']) if 'hii_air' in unknown else arg['tii']
+
+        arg['vi'], arg['ti'], arg['vii'], arg['tii'], access = \
+            newton_method.restrictions(unknown_local, tipdvizh, access, arg['vi'], arg['ti'], arg['vii'], arg['tii'])
+        if access == True:
+            arg['Hi'] = argum['Hi'] = boiler.HGAZ(arg['vi'], arg['alfai'], arg['vc_rec'], arg['H_rec']) if 'Hi' in unknown else arg['Hi']
+            arg['Hii'] = argum['Hii'] = boiler.HGAZ(arg['vii'], arg['alfaii'], arg['vc_rec'], arg['H_rec']) if 'Hii' in unknown else arg['Hii']
+            arg['hi'] = argum['hi_air'] = boiler.HAIR(arg['ti']) if 'hi_air' in unknown else arg['hi']
+            arg['hii'] = argum['hii_air'] = boiler.HAIR(arg['tii']) if 'hii_air' in unknown else arg['hii']
+
+        arg['k'] = self.__k_method(arg['wg'], arg['wp'])
+        arg['deltat'] = boiler.tempnap(tipdvizh, arg['vi'], arg['ti'], arg['vii'], arg['tii'])
+        Hpris = boiler.HAIR((arg['ti'] + arg['tii']) / 2)
+        prov_argum["Hii"] = arg['Hi'] + arg['delta_alfa'] * Hpris - arg['k'] * arg['F'] * arg['deltat'] / (arg['Br'] * 1000 * arg['fi'])
+        prov_argum["hii_air"] = arg['hi'] + ((arg['k'] * arg['F'] * arg['deltat']) / (arg['Br'] * 1000) + arg['Ql']) / (arg['bettagvii'] + arg['delta_alfa'] / 2)
+
+        return prov_argum
+
+    def __kornivzp(self):
+        boiler, unknown, arg = self.boiler, self.unknown, self.arg
+
+        arg['bettagvii'] = arg['bettagvi'] - arg['delta_alfa']
+        arg['Bii_air'] = arg['Bi_air']
+        arg['Qlvyh'] = arg['Qlvh'] * (1 - arg['fi_pp'])
+        arg['Ql'] = arg['Qlvh'] - arg['Qlvyh']
+        arg['alfaii'] = arg['alfai'] + arg['delta_alfa']
+
+        argum_temp = {
+            'Hi' : arg['vi'],
+            'hi_air': arg['ti'],
+            'Hii': arg['vii'],
+            'hii_air': arg['tii'],
+            'F': arg['F'],
+        }
+
+        newton_method.argum_nan(argum_temp)
+
+        newton_method.argum_pre(unknown, argum_temp)
+
+        arg['vi'] = argum_temp["Hi"]
+        arg['ti'] = argum_temp["hi_air"]
+        arg['vii'] = argum_temp["Hii"]
+        arg['tii'] = argum_temp["hii_air"]
+        arg['F'] = argum_temp["F"]
+
+        argum = {
+            'Hi' : boiler.HGAZ(arg['vi'], arg['alfai'], arg['vc_rec'], arg['H_rec']) if 'Hi' in unknown or math.isnan(arg['Hi']) else arg['Hi'],
+            'hi_air' : boiler.HAIR(arg['ti']) if 'hi_air' in unknown or math.isnan(arg['hi']) else arg['hi'],
+            'Hii' : boiler.HGAZ(arg['vii'], arg['alfaii'], arg['vc_rec'], arg['H_rec']) if 'Hii' in unknown or math.isnan(arg['Hii']) else arg['Hii'],
+            'hii_air': boiler.HAIR(arg['tii']) if 'hii_air' in unknown or math.isnan(arg['hii']) else arg['hii'],
+            'F' : arg['F'],
+        }
+
+        newton_method.newton_method(self.__vzpiter, argum, unknown)
+
+    def poisk_korney(self):
+        arg, boiler = self.arg, self.boiler
+        if math.isnan(arg['Br']):
+            arg['Br'] = 20
+        arg['vc_rec'] = boiler.vc_rec
+        arg['H_rec'] = boiler.H_rec
+        arg['Vg'] = boiler.Vg(arg['alfai'] + arg['delta_alfa'] / 2, boiler.Vg_rec)
+        arg['fi'] = boiler.fi
+        self.__kornivzp()
+        self.__Qb_method()
