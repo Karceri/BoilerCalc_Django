@@ -80,7 +80,7 @@ elem_par = {'h' : 3,
 # x = new_water_steam.eheatT(26.6, math.nan)
 
 a = s()
-a.Bi = 45
+a.Bi = 46
 x = a.Bi
 
 print(x)
